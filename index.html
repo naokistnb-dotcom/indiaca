@@ -130,7 +130,17 @@ body{
 .big{font-size:44px;font-weight:800;margin:0 0 6px;font-style:italic}
 .sub{color:var(--muted);margin:0;font-size:15px}
 #err{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:15px}
-@media (orientation:landscape) and (max-height:560px){.sb{width:min(46vw,300px)}.dg{font-size:clamp(24px,8vmin,34px)}}
+@media (orientation:landscape) and (max-height:560px){
+  /* landscape: one slim bar so the board doesn't cover the net */
+  #hud{padding-top:calc(4px + env(safe-area-inset-top,0px))}
+  .sb{display:flex;align-items:center;width:auto;gap:8px;padding:4px 10px;border-width:2px;border-radius:10px;background:linear-gradient(rgba(32,37,43,.92),rgba(17,20,24,.92))}
+  .tm{flex-direction:row;gap:6px}
+  .tm.r{flex-direction:row-reverse}
+  .tn{font-size:12px;padding:2px 6px;border-bottom-width:2px}
+  .dg{font-size:24px;width:auto;min-width:46px;padding:3px 6px 2px}
+  .md{gap:1px;font-size:9px}
+  .md .rule{padding:0 4px;font-size:9px}
+}
 @media (prefers-reduced-motion:reduce){#msg,#pad{transition:none;animation:none}}
 </style>
 </head>
@@ -175,7 +185,7 @@ body{
         <div class="online"><span class="olbl">オンライン対戦（部屋コード）</span>
           <div class="orow"><button id="mkRoom" class="obtn">部屋を作る</button><input id="codeIn" maxlength="4" placeholder="コード" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="部屋コード"><button id="joinRoom" class="obtn">入る</button></div>
           <p id="onote" class="onote"></p>
-          <p class="ver">ver 2026.09.23-9</p>
+          <p class="ver">ver 2026.09.23-10</p>
         </div>
       </div>
     </div>
