@@ -111,6 +111,7 @@ body{
   font:800 18px/1 inherit;font-family:inherit;text-align:center;letter-spacing:.2em;text-transform:uppercase;-webkit-user-select:text;user-select:text;touch-action:auto}
 .onote{margin:8px 0 0;font-size:12px;color:var(--muted);line-height:1.5;word-break:keep-all;overflow-wrap:anywhere}
 .onote:empty{display:none}
+.ver{margin:10px 0 0;font-size:11px;color:var(--muted);text-align:right}
 .code{font-size:56px;font-weight:800;letter-spacing:.18em;margin:6px 0 8px;font-variant-numeric:tabular-nums}
 .pal{margin:0 0 14px}.pal>span{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
 .sw{display:flex;gap:12px}
@@ -161,6 +162,7 @@ body{
         <div class="online"><span class="olbl">オンライン対戦（部屋コード）</span>
           <div class="orow"><button id="mkRoom" class="obtn">部屋を作る</button><input id="codeIn" maxlength="4" placeholder="コード" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="部屋コード"><button id="joinRoom" class="obtn">入る</button></div>
           <p id="onote" class="onote"></p>
+          <p class="ver">ver 2026.09.23-4</p>
         </div>
       </div>
     </div>
@@ -617,7 +619,7 @@ function woodTexture(){
   for(let i=0;i<8;i++)for(let j=0;j<=4;j++){const y=j*128+(i%2)*64;g.fillRect(i*64,(y%512)-1,64,2);}
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(10,7);t.anisotropy=4;return t;
 }
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(44,32),new THREE.MeshLambertMaterial({map:woodTexture()}));
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(36,32),new THREE.MeshLambertMaterial({map:woodTexture()}));
 floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
 const lineMat=new THREE.MeshBasicMaterial({color:0xfaf7ef});
 function line(x,z,w,d){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),lineMat);m.rotation.x=-Math.PI/2;m.position.set(x,0.004,z);scene.add(m);}
@@ -625,17 +627,85 @@ line(-CX,0,0.05,6.1);line(CX,0,0.05,6.1);line(0,CZ,13.45,0.05);line(0,-CZ,13.45,
 line(-1.98,0,0.05,6.1);line(1.98,0,0.05,6.1);line(0,0,0.05,6.1);
 const tint=new THREE.Mesh(new THREE.PlaneGeometry(13.4,6.1),new THREE.MeshBasicMaterial({color:0xc06a3a,transparent:true,opacity:0.12}));
 tint.rotation.x=-Math.PI/2;tint.position.y=0.002;scene.add(tint);
-const wallMat=new THREE.MeshLambertMaterial({color:0xeef2ea}),padMat=new THREE.MeshLambertMaterial({color:0x2f6b80});
-const back=new THREE.Mesh(new THREE.PlaneGeometry(44,14),wallMat);back.position.set(0,7,-11);scene.add(back);
-const backPad=new THREE.Mesh(new THREE.PlaneGeometry(44,2),padMat);backPad.position.set(0,1,-10.98);scene.add(backPad);
-for(const sx of [-1,1]){
-  const w=new THREE.Mesh(new THREE.PlaneGeometry(32,14),wallMat);w.rotation.y=-sx*Math.PI/2;w.position.set(sx*17,7,5);scene.add(w);
-  const pd=new THREE.Mesh(new THREE.PlaneGeometry(32,2),padMat);pd.rotation.y=-sx*Math.PI/2;pd.position.set(sx*16.98,1,5);scene.add(pd);
-}
-const winMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.75});
-for(let i=-4;i<=4;i++){const w=new THREE.Mesh(new THREE.PlaneGeometry(3,2.2),winMat);w.position.set(i*4.4,10,-10.95);scene.add(w);}
+const wallMat=new THREE.MeshLambertMaterial({color:0xf1ebdf}),padMat=new THREE.MeshLambertMaterial({color:0xb98452});
+const winMat=new THREE.MeshBasicMaterial({color:0xd6ecf7});
+const frameMat=new THREE.MeshLambertMaterial({color:0x5b6a73});
 const beamMat=new THREE.MeshLambertMaterial({color:0xd9ded6});
-for(let i=-4;i<=4;i++){const bm=new THREE.Mesh(new THREE.BoxGeometry(0.4,14,0.4),beamMat);bm.position.set(i*4.4+2.2,7,-10.8);scene.add(bm);}
+// windows, banners and a clock give the gym some life
+function addWindow(g,x,y,z,w,h){
+  const f=new THREE.Mesh(new THREE.BoxGeometry(w+0.24,h+0.24,0.06),frameMat);f.position.set(x,y,z);g.add(f);
+  const gl=new THREE.Mesh(new THREE.PlaneGeometry(w,h),winMat);gl.position.set(x,y,z+0.04);g.add(gl);
+  const v=new THREE.Mesh(new THREE.BoxGeometry(0.07,h,0.04),frameMat);v.position.set(x,y,z+0.06);g.add(v);
+  const hz=new THREE.Mesh(new THREE.BoxGeometry(w,0.07,0.04),frameMat);hz.position.set(x,y+h*0.12,z+0.06);g.add(hz);
+}
+const BANNERS=[[['全力','#b3202c'],['一球入魂','#1d3f7a'],['つなげ','#1f7a4d']],[['挑戦','#6b2d8c'],['羽根に魂','#b3202c'],['勝利','#1d3f7a']]];
+function bannerTex(text,bg){
+  const c=document.createElement('canvas');c.width=128;c.height=384;const g=c.getContext('2d');
+  g.fillStyle=bg;g.fillRect(0,0,128,384);g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=5;g.strokeRect(8,8,112,368);
+  g.fillStyle='#fff';const n=text.length,fs=Math.min(80,Math.floor(330/n));g.font=`800 ${fs}px "Hiragino Mincho ProN","Yu Mincho",serif`;
+  g.textAlign='center';g.textBaseline='middle';
+  for(let i=0;i<n;i++)g.fillText(text[i],64,192+(i-(n-1)/2)*fs*1.02);
+  return new THREE.CanvasTexture(c);
+}
+function wideBanner(text,bg,w,h){
+  const c=document.createElement('canvas');c.width=1024;c.height=Math.round(1024*h/w);const g=c.getContext('2d');
+  g.fillStyle=bg;g.fillRect(0,0,c.width,c.height);g.fillStyle='#fff';g.font=`800 ${Math.round(c.height*0.58)}px "Hiragino Mincho ProN","Yu Mincho",serif`;
+  g.textAlign='center';g.textBaseline='middle';g.fillText(text,c.width/2,c.height*0.54);
+  return new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c)}));
+}
+function clockTex(){
+  const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');
+  g.fillStyle='#fff';g.beginPath();g.arc(128,128,120,0,7);g.fill();g.lineWidth=14;g.strokeStyle='#2b2f36';g.stroke();
+  g.fillStyle='#2b2f36';for(let i=0;i<12;i++){const a=i*Math.PI/6;g.fillRect(128+Math.sin(a)*96-4,128-Math.cos(a)*96-10,8,20);}
+  g.lineCap='round';g.lineWidth=10;g.beginPath();g.moveTo(128,128);g.lineTo(128+60*Math.sin(9.2*Math.PI/6),128-60*Math.cos(9.2*Math.PI/6));g.stroke();
+  g.lineWidth=6;g.beginPath();g.moveTo(128,128);g.lineTo(128+90*Math.sin(Math.PI*0.2),128-90*Math.cos(Math.PI*0.2));g.stroke();
+  return new THREE.CanvasTexture(c);
+}
+// a closed gym (walls on all four sides) so both players see a gym behind the court
+const GZ=15,GX=17;
+for(const sz of [-1,1]){ // end walls
+  const g=new THREE.Group();g.position.z=sz*GZ;g.rotation.y=sz>0?Math.PI:0;scene.add(g);
+  const w=new THREE.Mesh(new THREE.PlaneGeometry(2*GX,14),wallMat);w.position.y=7;g.add(w);
+  const pd=new THREE.Mesh(new THREE.PlaneGeometry(2*GX,2.6),padMat);pd.position.set(0,1.3,0.02);g.add(pd);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(2*GX,0.08,0.08),frameMat);cap.position.set(0,2.62,0.05);g.add(cap);
+  for(let i=-3;i<=3;i++)addWindow(g,i*4.4,10,0.05,3,2.2);
+  for(let i=-3;i<=4;i++){const bm=new THREE.Mesh(new THREE.BoxGeometry(0.4,14,0.4),beamMat);bm.position.set(i*4.4-2.2,7,0.2);g.add(bm);}
+  const ck=new THREE.Mesh(new THREE.CircleGeometry(0.6,32),new THREE.MeshBasicMaterial({map:clockTex()}));ck.position.set(sz<0?6.6:0,sz<0?7.4:8.2,0.3);g.add(ck);
+  if(sz<0){const wb=wideBanner('第1回 インディアカ大会','#1d3f7a',11,1.4);wb.position.set(0,6.0,0.25);g.add(wb);}
+}
+for(const sx of [-1,1]){ // side walls
+  const w=new THREE.Mesh(new THREE.PlaneGeometry(2*GZ,14),wallMat);w.rotation.y=-sx*Math.PI/2;w.position.set(sx*GX,7,0);scene.add(w);
+  const sg=new THREE.Group();sg.position.x=sx*GX;sg.rotation.y=-sx*Math.PI/2;scene.add(sg);
+  const pd=new THREE.Mesh(new THREE.PlaneGeometry(2*GZ,2.6),padMat);pd.position.set(0,1.3,0.02);sg.add(pd);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(2*GZ,0.08,0.08),frameMat);cap.position.set(0,2.62,0.05);sg.add(cap);
+  for(let i=-2;i<=2;i++){addWindow(sg,i*5.6,10,0.05,3.4,2.2);addWindow(sg,i*5.6,3.9,0.05,2.6,1.3);}
+  // second-floor gallery (catwalk) with railing and hanging banners
+  const gal=new THREE.Mesh(new THREE.BoxGeometry(2*GZ,0.22,1.3),new THREE.MeshLambertMaterial({color:0x8a6a48}));gal.position.set(0,5.3,0.65);gal.castShadow=true;sg.add(gal);
+  const rail=new THREE.Mesh(new THREE.BoxGeometry(2*GZ,0.06,0.06),frameMat);rail.position.set(0,6.3,1.28);sg.add(rail);
+  const rail2=rail.clone();rail2.position.y=5.8;sg.add(rail2);
+  for(let z=-GZ+0.5;z<=GZ-0.5;z+=1.5){const po=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.9,0.05),frameMat);po.position.set(z,5.85,1.28);sg.add(po);}
+  BANNERS[sx<0?0:1].forEach((bn,k)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(1.0,3.0),new THREE.MeshLambertMaterial({map:bannerTex(bn[0],bn[1]),side:THREE.DoubleSide}));m.position.set(-7.5+k*7.5,3.75,1.32);sg.add(m);});
+}
+// basketball backboards on the side walls, like a school gym
+const boardMat=new THREE.MeshLambertMaterial({color:0xffffff}),rimMat=new THREE.MeshLambertMaterial({color:0xe0621c});
+for(const sx of [-1,1]){
+  const g=new THREE.Group();g.position.set(sx*(GX-1.2),0,0);g.rotation.y=sx>0?Math.PI:0;scene.add(g);
+  const bd=new THREE.Mesh(new THREE.BoxGeometry(0.06,1.05,1.8),boardMat);bd.position.set(0,3.55,0);g.add(bd);
+  const sq=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.45,0.59),new THREE.MeshBasicMaterial({color:0xd0402a,wireframe:true}));sq.position.set(0.01,3.3,0);g.add(sq);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.23,0.02,6,20),rimMat);rim.rotation.x=Math.PI/2;rim.position.set(0.3,3.05,0);g.add(rim);
+  const arm=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.08,0.08),beamMat);arm.position.set(-0.6,3.55,0);g.add(arm);
+}
+// stage with curtain at the +z end (what the guest faces)
+{
+  const g=new THREE.Group();g.position.z=GZ;scene.add(g);
+  const stMat=new THREE.MeshLambertMaterial({color:0xb7864f}),curt=new THREE.MeshLambertMaterial({color:0x8e1f2b}),frame=new THREE.MeshLambertMaterial({color:0x3b3f46});
+  const st=new THREE.Mesh(new THREE.BoxGeometry(14,1.1,3),stMat);st.position.set(0,0.55,-1.5);st.receiveShadow=true;g.add(st);
+  const front=new THREE.Mesh(new THREE.BoxGeometry(14,1.1,0.05),new THREE.MeshLambertMaterial({color:0x7d5a35}));front.position.set(0,0.55,-3.02);g.add(front);
+  const c=new THREE.Mesh(new THREE.PlaneGeometry(12.6,4.6),curt);c.position.set(0,3.4,-0.3);c.rotation.y=Math.PI;g.add(c);
+  for(let i=0;i<14;i++){const f=new THREE.Mesh(new THREE.BoxGeometry(0.12,4.6,0.08),new THREE.MeshLambertMaterial({color:0x741826}));f.position.set(-6.1+i*0.94,3.4,-0.34);g.add(f);}
+  const top=new THREE.Mesh(new THREE.BoxGeometry(14.4,1.0,0.3),frame);top.position.set(0,6.2,-0.3);g.add(top);
+  for(const x of [-7,7]){const sd=new THREE.Mesh(new THREE.BoxGeometry(0.6,6.7,0.3),frame);sd.position.set(x,3.35,-0.3);g.add(sd);}
+}
 const postMat=toon(0x2b3a44);
 for(const z of [-3.4,3.4]){
   part(cyl(0.045,0.045,2.25,12),postMat,scene,{r:0.045}).position.set(0,2.25,z);
@@ -757,7 +827,7 @@ function addOfficial(role,x,y,z,skin,hair,style){
   const ch=makeAthlete({official:true,mats:OFF_MATS,skin,hair,style});
   const o={ch,role,x,y,z,yaw:Math.atan2(z,-x),sig:'',sigT:0,base:0};
   if(role==='ref'||role==='ump')o.yaw=z<0?-Math.PI/2:Math.PI/2;
-  o.base=o.yaw;
+  o.base=o.yaw;o.x0=x;o.z0=z;o.yaw0=o.yaw;
   if(role==='line'){ // flag in the right hand
     const stick=mesh(new THREE.CylinderGeometry(0.008,0.008,0.42,6),MAT.pad,ch.R.wr);stick.position.y=-0.3;
     const fl=new THREE.Mesh(new THREE.PlaneGeometry(0.2,0.14),new THREE.MeshLambertMaterial({color:0xf2d21e,side:THREE.DoubleSide}));
@@ -767,7 +837,8 @@ function addOfficial(role,x,y,z,skin,hair,style){
 }
 // referee stand (far post side)
 const standM=new THREE.MeshLambertMaterial({color:0x5b6770});
-{const gS=new THREE.Group();gS.position.set(0,0,-4.35);scene.add(gS);
+const refStand=new THREE.Group();
+{const gS=refStand;gS.position.set(0,0,-4.35);scene.add(gS);
  const top=mesh(new THREE.BoxGeometry(0.7,0.06,0.6),standM,gS);top.position.y=1.2;
  for(const [x,z] of [[-0.3,-0.25],[0.3,-0.25],[-0.3,0.25],[0.3,0.25]]){const l=mesh(new THREE.CylinderGeometry(0.025,0.025,1.2,8),standM,gS);l.position.set(x,0.6,z);}
  for(let i=1;i<4;i++){const r=mesh(new THREE.BoxGeometry(0.62,0.03,0.04),standM,gS);r.position.set(0,i*0.3,-0.27);}
@@ -780,6 +851,11 @@ addOfficial('line',CX+0.6,0,-CZ-0.6,0xe8c4a0,0x3b2718,'crew');
 addOfficial('line',-CX-0.6,0,CZ+0.6,0xf0cdaa,0x4a3020,'pony');
 addOfficial('line',CX+0.6,0,CZ+0.6,0xd9a97f,0x1e1612,'side');
 let lastLand=null;
+// the guest views from the other end: move the stand and officials so nothing blocks the near side
+function placeOfficials(){
+  const m=MS();refStand.position.z=m*-4.35;refStand.rotation.y=m<0?Math.PI:0;
+  for(const o of OFF){o.x=m*o.x0;o.z=m*o.z0;o.yaw=o.yaw0+(m<0?Math.PI:0);o.ch.root.position.set(o.x,o.y,o.z);o.ch.root.rotation.y=o.yaw;}
+}
 function officialsSignal(winnerTeam){
   if(NET.role==='host')NET.sig={i:++NET.seenSig,w:winnerTeam,l:lastLand?[+lastLand.x.toFixed(2),+lastLand.z.toFixed(2),lastLand.inC?1:0]:null};
   const ws=TEAM[winnerTeam].side;
@@ -1097,6 +1173,7 @@ function frame(nowMs){
 const SW=['blue','red','white','yellow'];
 let myPal='blue';try{const v=localStorage.getItem('indiaca-pal');if(SW.includes(v))myPal=v;}catch(e){}
 function applyTeams(){
+  placeOfficials();
   if(NET.role==='solo'){applyPalette(0,myPal);applyPalette(1,'green');return;}
   const other=NET.oppPal===myPal?(myPal==='green'?'blue':'green'):NET.oppPal;
   applyPalette(ME,myPal);applyPalette(1-ME,other);
