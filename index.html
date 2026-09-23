@@ -50,7 +50,16 @@ body{
 .sv.on{background:#7dff6a;box-shadow:0 0 6px #7dff6a}
 #snd{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:calc(8px + env(safe-area-inset-top,0px));pointer-events:auto;width:38px;height:38px;border-radius:50%;
   border:2px solid rgba(255,255,255,.55);background:rgba(20,28,34,.45);font-size:17px;line-height:1;padding:0;touch-action:manipulation}
-#snd:focus-visible{outline:3px solid #fff;outline-offset:2px}
+#snd:focus-visible,#pbtn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+#pbtn{position:absolute;left:max(10px,env(safe-area-inset-left,0px));top:calc(8px + env(safe-area-inset-top,0px));pointer-events:auto;width:38px;height:38px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.55);background:rgba(20,28,34,.45);color:#fff;font-size:15px;line-height:1;padding:0;touch-action:manipulation;display:none}
+#pDiff{margin:14px 0 4px}#pDiff .olbl{text-align:center}
+.pd{border:2px solid color-mix(in srgb,var(--ink) 25%,transparent);border-radius:12px;padding:12px 4px;font:800 14px/1 inherit;font-family:inherit;background:transparent;color:var(--ink)}
+.pd[aria-pressed="true"]{background:var(--p1);border-color:var(--p1);color:#fff}
+.pbig,.pline{width:100%;margin-top:12px;padding:16px;border-radius:14px;font:800 16px/1 inherit;font-family:inherit}
+.pbig{border:none;background:var(--p1);color:#fff}
+.pline{border:2px solid color-mix(in srgb,var(--ink) 30%,transparent);background:transparent;color:var(--ink)}
+.pd:focus-visible,.pbig:focus-visible,.pline:focus-visible{outline:3px solid var(--p1);outline-offset:2px}
 #stage{position:absolute;inset:0;overflow:hidden}
 #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 #msg{
@@ -153,6 +162,7 @@ body{
       <div class="tm r"><span class="tn"><span id="oppName">CPU</span><i class="sv" id="svR" title="サーブ"></i></span><span class="dg" id="sR">0</span></div>
     </div>
     <button id="snd" aria-label="音のオン・オフ">🔊</button>
+    <button id="pbtn" aria-label="一時停止メニュー">⏸</button>
   </div>
   <div id="stage">
     <canvas id="cv" aria-label="インディアカのコート。相手コートをなぞると狙う場所が変わります"></canvas>
@@ -185,7 +195,7 @@ body{
         <div class="online"><span class="olbl">オンライン対戦（部屋コード）</span>
           <div class="orow"><button id="mkRoom" class="obtn">部屋を作る</button><input id="codeIn" maxlength="4" placeholder="コード" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="部屋コード"><button id="joinRoom" class="obtn">入る</button></div>
           <p id="onote" class="onote"></p>
-          <p class="ver">ver 2026.09.23-10</p>
+          <p class="ver">ver 2026.09.23-11</p>
         </div>
       </div>
     </div>
@@ -195,6 +205,17 @@ body{
         <p class="code" id="lbCode">----</p>
         <p class="sub" id="lbMsg"></p>
         <button id="lbCancel">やめる</button>
+      </div>
+    </div>
+    <div class="overlay" id="pause" hidden>
+      <div class="card" style="text-align:center">
+        <p class="big">PAUSE</p>
+        <p class="sub" id="pNote"></p>
+        <div id="pDiff"><span class="olbl">CPUの強さ</span>
+          <div class="diffs"><button class="pd" data-d="easy">やさしい</button><button class="pd" data-d="normal">ふつう</button><button class="pd" data-d="hard">つよい</button></div>
+        </div>
+        <button id="pResume" class="pbig">試合に戻る</button>
+        <button id="pTitle" class="pline">タイトルに戻る</button>
       </div>
     </div>
     <div class="overlay" id="over" hidden>
@@ -547,8 +568,9 @@ function movePlayers(){
   if(pend&&cpu(pend.team)&&pend.type==='attack'&&!pend.low&&!pend.jumped&&pend.cpuQ!=='miss'&&now>=pend.tPred-0.4+pend.jit){pend.jumped=true;jump(PL[pend.pl]);}
   if(blockPend&&cpu(blockPend.team)&&!blockPend.jumped&&now>=blockPend.tIdeal+blockPend.jit){blockPend.jumped=true;jump(PL[blockPend.pl]);}
 }
+let paused=false;
 function step(){
-  if(mode!=='play')return;
+  if(mode!=='play'||paused)return;
   now+=DT;
   if(phase==='serve'){
     holdBall();
@@ -584,7 +606,7 @@ function doTap(t,tt){
   else if(blockPend&&blockPend.team===t){blockPend.jumped=true;jump(PL[blockPend.pl]);}
 }
 function action(){
-  if(mode!=='play')return;
+  if(mode!=='play'||paused)return;
   if(NET.role==='guest'){NET.tapSeq++;NET.tapTT=now;sendInput();return;}
   doTap(ME,now);
 }
@@ -1189,7 +1211,7 @@ function updateHud(){updateTwoBtn();
     else if(pend&&pend.team===ME){label=pend.two?'TWO ATTACK':JP[pend.type];live=true;}
     else if(blockPend&&blockPend.team===ME){label='BLOCK';live=true;}
   }
-  const k=label+live+mode;if(k!==btnKey){btnKey=k;const pd=$('pad');pd.innerHTML=live?'<span'+(label.length>7?' class="long"':'')+'>'+label+'</span><small>'+(label==='SERVE'?'TAP TO TOSS':'TAP')+'</small>':'<span>TAP</span>';pd.className=live?'live':'';pd.style.display=mode==='play'?'flex':'none';$('mini').style.display=mode==='play'?'block':'none';$('qbtn').style.display=mode==='play'?'flex':'none';if(mode==='play')miniSize();}
+  const k=label+live+mode;if(k!==btnKey){btnKey=k;const pd=$('pad');pd.innerHTML=live?'<span'+(label.length>7?' class="long"':'')+'>'+label+'</span><small>'+(label==='SERVE'?'TAP TO TOSS':'TAP')+'</small>':'<span>TAP</span>';pd.className=live?'live':'';pd.style.display=mode==='play'?'flex':'none';$('mini').style.display=mode==='play'?'block':'none';$('qbtn').style.display=mode==='play'?'flex':'none';$('pbtn').style.display=mode==='play'?'block':'none';if(mode==='play')miniSize();}
 }
 
 // loop
@@ -1241,6 +1263,33 @@ function updateJudge(dt){
   el.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-50%) scale(${sc.toFixed(2)})`;
   el.style.opacity=Math.max(0,Math.min(1,judgeT*4));
 }
+// ================= pause menu =================
+function openPause(){
+  if(mode!=='play'||!$('pause').hidden)return;
+  const solo=NET.role==='solo';
+  paused=solo;
+  $('pNote').textContent=solo?'試合を止めています':'オンライン対戦中は、試合は止まりません';
+  $('pDiff').style.display=solo?'block':'none';
+  $('pTitle').textContent=solo?'タイトルに戻る':'対戦をやめてタイトルに戻る';
+  document.querySelectorAll('.pd').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.d===diff)));
+  $('pause').hidden=false;
+}
+function closePause(){$('pause').hidden=true;paused=false;}
+$('pbtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();openPause();});
+$('pResume').addEventListener('click',closePause);
+$('pTitle').addEventListener('click',()=>{
+  closePause();
+  if(NET.role!=='solo')leaveOnline();
+  mode='title';serveTeam=0;setupServe();$('msg').className='';
+  $('over').hidden=true;$('title').hidden=false;
+});
+document.querySelectorAll('.pd').forEach(bt=>bt.addEventListener('click',()=>{
+  diff=bt.dataset.d;$('dLabel').textContent=DIFF[diff].label;
+  document.querySelectorAll('.pd').forEach(x=>x.setAttribute('aria-pressed',String(x===bt)));
+}));
+window.addEventListener('keydown',e=>{if(e.code==='Escape'||e.code==='KeyP'){if($('pause').hidden)openPause();else closePause();}});
+// leaving the app (home button, phone call) pauses a solo match
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play'&&NET.role==='solo')openPause();});
 // ================= sound =================
 let AC=null,master=null,noiseBuf=null,soundOn=true;
 try{soundOn=localStorage.getItem('indiaca-sound')!=='off';}catch(e){}
